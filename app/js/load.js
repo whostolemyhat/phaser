@@ -15,13 +15,20 @@ app.loadState = {
         game.load.setPreloadSprite(progressBar);
 
         // load all images
-        game.load.image('player', '/img/player.png');
+        // game.load.image('player', '/img/player.png');
+        game.load.spritesheet('player', '/img/player2.png', 20, 20);
         game.load.image('enemy', '/img/enemy.png');
         game.load.image('coin', '/img/coin.png');
         game.load.image('wallH', '/img/wallHorizontal.png');
         game.load.image('wallV', '/img/wallVertical.png');
+        game.load.image('pixel', '/img/pixel.png');
+        game.load.spritesheet('mute', '/img/muteButton.png', 28, 22);
 
         game.load.image('background', '/img/background.png');
+
+        game.load.audio('jump', ['/audio/jump.ogg', '/audio/jump.mp3']);
+        game.load.audio('dead', ['/audio/dead.ogg', '/audio/dead.mp3']);
+        game.load.audio('coin', ['audio/coin.ogg', '/audio/coin.mp3']);
     },
 
     create: function() {

@@ -10,6 +10,9 @@ app.playState = {
         game.physics.arcade.enable(this.player);
         this.player.body.gravity.y = 500;
 
+        this.player.animations.add('right', [1, 2], 8, true);
+        this.player.animations.add('left', [3, 4], 8, true);
+
         this.enemies = game.add.group();
         this.enemies.enableBody = true;
         this.enemies.createMultiple(10, 'enemy');
@@ -22,18 +25,69 @@ app.playState = {
                                         { font: '18px Arial', fill: '#fff' });
 
         game.global.score = 0;
+
+        this.emitter = game.add.emitter(0, 0, 15);
+        // set particle image
+        this.emitter.makeParticles('pixel');
+        // speed in range -150 and 150
+        this.emitter.setYSpeed(-150, 150);
+        this.emitter.setXSpeed(-150, 150);
+        this.emitter.gravity = 0;
+
+        this.jumpSound = game.add.audio('jump');
+        this.jumpSound.volume = 0.5;
+        this.coinSound = game.add.audio('coin');
+        this.deadSound = game.add.audio('dead');
+
         this.createWorld();
-        game.time.events.loop(2200, this.addEnemy, this);
+
+        // game.time.events.loop(2200, this.addEnemy, this);
+        this.nextEnemy = 1000;
+
+        // capture all keyboard events to prevent scrolling
+        game.input.keyboard.addKeyCapture([Phaser.Keyboard.UP, Phaser.Keyboard.DOWN, Phaser.Keyboard.LEFT, Phaser.Keyboard.RIGHT]);
+
+        this.wasd = {
+            up: game.input.keyboard.addKey(Phaser.Keyboard.W),
+            down: game.input.keyboard.addKey(Phaser.Keyboard.S),
+            left: game.input.keyboard.addKey(Phaser.Keyboard.A),
+            right: game.input.keyboard.addKey(Phaser.Keyboard.D)
+        };
+
     },
 
     takeCoin: function() {
         game.global.score += 5;
         this.scoreLabel.text = 'score: ' + game.global.score;
 
+        this.coinSound.play();
+
         this.updateCoinPosition();
+        this.coin.scale.setTo(0, 0);
+        game.add.tween(this.coin.scale).to({ x: 1, y: 1 }, 300).start();
+
+        game.add.tween(this.player.scale).to({ x: 1.3, y: 1.3 }, 50).to({ x: 1, y: 1 }, 50).start();
     },
 
     playerDie: function() {
+        // check player is alive, otherwise this gets called every frame
+        if(!this.player.alive) {
+            return;
+        }
+
+        this.player.kill();
+
+        this.deadSound.play();
+
+        this.emitter.x = this.player.x;
+        this.emitter.y = this.player.y;
+        // 15 particles which live for 600ms
+        this.emitter.start(true, 600, null, 15);
+
+        game.time.events.add(1000, this.startMenu, this);
+    },
+
+    startMenu: function() {
         game.state.start('menu');
     },
 
@@ -49,20 +103,42 @@ app.playState = {
 
         game.physics.arcade.collide(this.enemies, this.walls);
         game.physics.arcade.overlap(this.player, this.enemies, this.playerDie, null, this);
+
+        // add enemies
+        var start = 4000;
+        var end = 1000;
+        var score = 100;
+        var delay;
+
+        if(this.nextEnemy < game.time.now) {
+            delay = Math.max(start - (start - end) * game.global.score/score, end);
+            this.addEnemy();
+            this.nextEnemy = game.time.now + delay;
+        }
     },
 
     movePlayer: function() {
-        if(this.cursor.left.isDown) {
+        if(this.cursor.left.isDown || this.wasd.left.isDown) {
+            
             this.player.body.velocity.x = -200;
-        } else if(this.cursor.right.isDown) {
+            this.player.animations.play('left');
+
+        } else if(this.cursor.right.isDown || this.wasd.right.isDown) {
+
             this.player.body.velocity.x = 200;
+            this.player.animations.play('right');
+
         } else {
+
             this.player.body.velocity.x = 0;
+            this.player.animations.stop();
+            this.player.frame = 0;
         }
 
         // up/down
-        if(this.cursor.up.isDown && this.player.body.touching.down) {
+        if((this.cursor.up.isDown || this.wasd.up.isDown) && this.player.body.touching.down) {
             this.player.body.velocity.y = -320;
+            this.jumpSound.play();
         }
     },
 
